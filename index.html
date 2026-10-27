@@ -148,6 +148,24 @@ input#nick{font:inherit;font-size:17px;padding:12px 14px;border-radius:12px;bord
 @keyframes blink{50%{opacity:0}}
 .end{text-align:center;display:grid;gap:10px;padding-block:6px}
 .end h2{font-size:26px;color:var(--ok)}
+.mboard{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.mbox{position:relative;background:#fff;border:3px solid #22303a;border-radius:10px;box-shadow:4px 4px 0 #22303a;padding:10px 8px;display:grid;justify-items:center;gap:4px;text-align:center;overflow:hidden}
+.mbox svg{width:58px;height:20px}
+.mbox b{font-family:var(--display);font-weight:400;font-size:18px;line-height:1.2}
+.mbox .ds{font-size:12px;color:#5f6d73;line-height:1.35}
+.mbox .ct{font-family:var(--mono);font-size:14px}
+.mbox .st{font-size:12px;border-radius:999px;padding:1px 8px;background:#e9eee7;color:#5f6d73}
+.mbox.active{border-color:#b08a1a;box-shadow:4px 4px 0 #b08a1a;background:#fffbe6}
+.mbox.active .st{background:#ffd84a;color:#2b2410;font-weight:700}
+.mbox.locked{background:#eef0ee;border-color:#9aa5a0;box-shadow:4px 4px 0 #9aa5a0;color:#7b8781}
+.mbox.locked svg{filter:grayscale(1);opacity:.35}
+.mbox.done .st{background:#dff1e7;color:#1f7a4d;font-weight:700}
+.mbox .stampc{position:absolute;left:50%;top:50%;width:78px;height:78px;margin:-39px 0 0 -39px;border:4px solid #d23a2b;border-radius:50%;color:#d23a2b;display:grid;place-items:center;font-family:var(--display);font-size:22px;transform:rotate(-14deg);background:rgba(255,255,255,.55);pointer-events:none}
+.mbox .stampc.new{animation:stampIn .45s cubic-bezier(.3,1.6,.5,1) both .25s}
+@keyframes stampIn{0%{transform:rotate(-14deg) scale(2.4);opacity:0}100%{transform:rotate(-14deg) scale(1);opacity:1}}
+.mbox.opened{animation:openPulse 1s ease-out .7s 2}
+@keyframes openPulse{50%{box-shadow:0 0 0 6px #ffd84a}}
+.mlead{font-family:var(--display);font-size:19px;line-height:1.5;margin:0}
 .hbtns{display:flex;gap:6px;align-items:center;flex:none}
 .hbtn{border:2px solid #22303a;background:#fff;color:#22303a;border-radius:8px;padding:2px 10px;font-size:14px;font-family:var(--display)}
 .hbtn.hot{background:#ffd84a}
@@ -270,7 +288,7 @@ const SCENES=[
   body:"在教育處開會，不方便講電話。幫我先買 8 張 2,000 元的禮物卡，刮開拍卡號給我，回去還你。",
   q:"大頭貼和名字都是校長。你會？",
   opts:[{x:"校長交辦，馬上衝超商",ok:false,r:"下午校長本人經過：「什麼禮物卡？我連怎麼買都不會。」"},
-   {x:"打校長的手機，確認是不是本人",ok:true},
+   {x:"打校長室分機，確認是不是本人",ok:true},
    {x:"先買 4 張，剩下的等確認再說",ok:false,r:"詐騙集團感謝你的折衷精神，8,000 元已經入帳。"}],
   tip:"要錢、要禮物卡、要你保密的訊息，先停下來，用原本的電話問本人。"},
  {t:"12:40",p:"午休",loc:"學務處",on:"電腦",quest:"左轉進學務處，看看電腦",
@@ -296,7 +314,7 @@ const SCENES=[
   mail:{name:"Google 帳戶安全性",addr:"no-reply@google-account-verify.net",subj:"您的帳戶將於 24 小時內停用，請立即驗證",att:""},
   q:"你的學校 Google 帳號裡，有全班的成績和名單。你會？",
   opts:[{x:"點信裡的「立即驗證帳戶」登入",ok:false,r:"你的雲端硬碟、學生名單和成績，現在都換主人了。"},
-   {x:"自己打開瀏覽器，到 myaccount.google.com 檢查",ok:true},
+   {x:"不點信裡的連結，自己打開 Google 檢查帳號",ok:true},
    {x:"轉寄給隔壁老師，問她有沒有也收到",ok:false,r:"她點了。現在你們兩個要一起去找資訊組。"}],
   tip:"不從信件連結登入。自己輸入網址，或用書籤進入官方網站。"},
  {t:"13:20",p:"研習前",loc:"教務處",on:"電腦",quest:"用教務處另一台電腦，把名單分享給代課老師",
@@ -326,8 +344,8 @@ function saveProg(){try{localStorage.setItem(PKEY,JSON.stringify({nick:S.nick,i:
 function playerId(){try{let id=localStorage.getItem('safe-offwork-pid');if(!id){id='T'+Date.now().toString(36).slice(-5)+Math.random().toString(36).slice(2,5);localStorage.setItem('safe-offwork-pid',id)}return id}catch(e){return 'T-'+Math.random().toString(36).slice(2,8)}}
 function progressText(){
   if(!S.mainDone) return G.ending?'主線完成，正在前往視聽教室':`主線第 ${Math.min(S.i+1,N)} 關`;
-  if(S.vrAt) return S.side>=SIDES.length?'全部完成，已領通行證':'已領通行證';
-  return S.side>=SIDES.length?'支線全部完成':`支線第 ${S.side+1} 站`;
+  const n=Object.keys(S.treasures).length, t=S.side<SIDES.length?`支線第 ${S.side+1} 站`:n<TOTAL_TREASURE?`寶藏任務 ${n}/${TOTAL_TREASURE}`:'三個任務全部完成';
+  return S.vrAt?t+'（已領通行證）':t;
 }
 function report(event){
   const url=(window.SHEET_URL||'').trim(); if(!/^https:\/\/script\.google\.com\//.test(url)) return;
@@ -1040,12 +1058,18 @@ function camUpdate(snap){
 function frame(ts){
   G.raf=requestAnimationFrame(frame);
   const dt=Math.min(.05,(ts-(G.last||ts))/1000); G.last=ts;
+  if(G.state==='walk'&&!G.path.length&&G.keyDir){
+    const [kx,ky]=G.keyDir, nx=Math.round(G.p.x)+kx, ny=Math.round(G.p.y)+ky;
+    if(kx) G.dir=kx>0?1:-1;
+    if(walkable(nx,ny)) G.path=[[nx,ny]];
+    else if(G.bump!==nx+','+ny){ G.bump=nx+','+ny; bumpInto(nx,ny); }
+  }
   if(G.path.length&&G.state==='walk'){
-    const [nx,ny]=G.path[0],sp=5.6*dt,dx=nx-G.p.x,dy=ny-G.p.y,d=Math.hypot(dx,dy);
+    const [nx,ny]=G.path[0],sp=(G.dash?9.5:5.6)*dt,dx=nx-G.p.x,dy=ny-G.p.y,d=Math.hypot(dx,dy);
     if(dx) G.dir=dx>0?1:-1;
     if(d<=sp){G.p.x=nx;G.p.y=ny;G.path.shift();const w=warpAt(M,nx,ny);if(w)doWarp(w);else if(!G.path.length)arrived()}
     else{G.p.x+=dx/d*sp;G.p.y+=dy/d*sp}
-    G.step+=dt*8;
+    G.step+=dt*(G.dash?14:8);
   }
   if(M===CAMPUS){ G.npcs.forEach(n=>npcTick(n,dt)); G.balls.forEach(b=>ballTick(b,dt)); }
   if(G.fade>0) G.fade=Math.max(0,G.fade-dt*3.5);
@@ -1272,7 +1296,7 @@ function arrived(){
 /* ---------- side quests, treasures and the VR pass ---------- */
 const MG={raf:0,iv:0};
 function stopMG(){cancelAnimationFrame(MG.raf);clearInterval(MG.iv);MG.raf=0;MG.iv=0}
-function sheet(html){G.state='dialog';G.path=[];const dl=$('#dlg');dl.hidden=false;dl.innerHTML=html;dl.scrollTop=0;return dl}
+function sheet(html){G.state='dialog';G.path=[];G.keyDir=null;const dl=$('#dlg');dl.hidden=false;dl.innerHTML=html;dl.scrollTop=0;return dl}
 function mgCanvas(id,w,h){const cv=$('#'+id),d=Math.min(2,window.devicePixelRatio||1);cv.width=w*d;cv.height=h*d;const c=cv.getContext('2d');c.setTransform(d,0,0,d,0,0);return c}
 function sideDone(k,extra){
   stopMG(); const newB=!S.badges[SIDES[k].id]; S.badges[SIDES[k].id]=true; S.side=Math.max(S.side,k+1);
@@ -1282,9 +1306,10 @@ function sideDone(k,extra){
   sheet(`<div class="end" style="text-align:left"><div class="meta"><span>校園闖關・第 ${k+1} 站</span><span>${SIDES[k].label}</span></div>
    <h2>${SIDES[k].icon} 徽章到手：${SIDES[k].name}</h2>
    <div style="background:#dff1e7;border:2px solid #1f7a4d;border-radius:12px;padding:12px 14px;display:grid;gap:4px"><span style="font-size:13px;color:#1f7a4d;font-weight:700">這一站的重點</span>${extra?`<span>${extra}</span>`:''}<span style="font-size:17px;line-height:1.6">${SIDES[k].lesson}</span></div>
-   <div class="card-hint"><span class="k">${nx?'提示卡 '+(k+2):'最後一站'}</span><span class="v">${nx?nx.hint:'全部徽章都拿到了！到迎曦樓一樓的 104 國際教室，領取 VR 體驗通行證。'}</span></div>
-   <button class="go" id="mgClose">看完了，回到校園</button></div>`);
-  $('#mgClose').onclick=closeDialog;
+   <div class="card-hint"><span class="k">${nx?'提示卡 '+(k+2):'最後一站'}</span><span class="v">${nx?nx.hint:'6 個闖關站全部完成！'}</span></div>
+   <button class="go" id="mgClose">${nx?'看完了，回到校園':'看完了，看任務卡'}</button></div>`);
+  $('#mgClose').onclick=nx?closeDialog:()=>openBoard({justDone:1,title:'支線任務完成！',
+    lead:Object.keys(S.treasures).length>=TOTAL_TREASURE?'6 枚徽章全部到手，三個任務都完成了！<br>最後到迎曦樓一樓的 <b>104 國際教室</b>，領取 VR 體驗通行證。':`6 枚徽章全部到手！<br>寶藏任務還差 <b>${TOTAL_TREASURE-Object.keys(S.treasures).length}</b> 個寶箱，上方「寶藏」按鈕有藏身線索。`,btn:'回到校園',onGo:()=>{closeDialog();updateHud()}});
 }
 function openSide(k){
   const q=SIDES[k];
@@ -1608,11 +1633,12 @@ function slideGame(ch){
 function treasureGot(ch){
   stopMG(); const first=!S.treasures[ch.id]; S.treasures[ch.id]=true; if(S.seek===ch.id) S.seek=null; saveProg(); if(first) report(`找到寶藏：${ch.name}`);
   const n=Object.keys(S.treasures).length;
+  if(first&&n>=TOTAL_TREASURE) return openBoard({justDone:2,title:'寶藏任務完成！',lead:S.side>=SIDES.length?`8 個寶箱全部找到了，三個任務都完成！<br>最後到迎曦樓一樓的 <b>104 國際教室</b>，領取 VR 體驗通行證。`:`8 個寶箱全部找到了！<br>支線任務還剩 <b>${SIDES.length-S.side}</b> 站，繼續加油！`,btn:'回到校園',onGo:()=>{closeDialog();updateHud()}});
   sheet(`<div class="end"><h2>🎁 寶藏到手！</h2><p style="margin:0">${first?`你找到了「${ch.name}」寶箱。`:'再玩一次也很紓壓吧！'}目前找到 <b>${n}/${TOTAL_TREASURE}</b> 個寶藏。</p><button class="go" id="mgClose">回到校園</button></div>`);
   $('#mgClose').onclick=closeDialog;
 }
 function openChest(ch){
-  if(!S.mainDone) return toast('寶箱鎖住了！完成主線任務後才能打開。');
+  if(!S.mainDone) return toast('寶箱鎖住了！完成主線任務後，寶藏任務才會開啟。');
   if(ch.id==='bubble') return bubbleGame(ch);
   if(ch.id==='boba') return bobaGame(ch);
   ({stack:stackGame,mosquito:mosquitoGame,memory:memoryGame,scratch:scratchGame,balloon:balloonGame,slide:slideGame})[ch.id](ch);
@@ -1637,6 +1663,30 @@ function bobaGame(ch){
   $('#mgNo').onclick=closeDialog;
 }
 
+/* mission board: 主線 → 支線 → 寶藏 */
+function phase(){const n=Object.keys(S.treasures).length;return !S.mainDone?0:S.side<SIDES.length?1:n<TOTAL_TREASURE?2:3}
+function boardHTML(justDone){
+  const ph=phase(), n=Object.keys(S.treasures).length, nb=SIDES.filter(q=>S.badges[q.id]).length, sc=S.log.filter(x=>x).length;
+  const stOf=k=>k===0?(S.mainDone?'done':'active'):!S.mainDone?'locked':(k===1?S.side>=SIDES.length:n>=TOTAL_TREASURE)?'done':'active';
+  const box=(k,icon,title,ds,ct)=>{const st=stOf(k);
+    return `<div class="mbox ${st}${justDone===0&&k>0&&st==='active'?' opened':''}">${icon}<b>${title}</b><span class="ds">${ds}</span><span class="ct">${ct}</span><span class="st">${st==='done'?'已完成':st==='active'?'進行中':'🔒 尚未開啟'}</span>${st==='done'?`<span class="stampc${justDone===k?' new':''}">完成</span>`:''}</div>`};
+  const heart='<svg viewBox="0 0 30 10" aria-hidden="true"><path d="M5 9S.5 6 .5 3.4C.5 1.6 1.8.6 3.1.6 4 .6 4.6 1.1 5 1.7 5.4 1.1 6 .6 6.9.6 8.2.6 9.5 1.6 9.5 3.4 9.5 6 5 9 5 9ZM15 9S10.5 6 10.5 3.4C10.5 1.6 11.8.6 13.1.6 14 .6 14.6 1.1 15 1.7 15.4 1.1 16 .6 16.9.6 18.2.6 19.5 1.6 19.5 3.4 19.5 6 15 9 15 9ZM25 9S20.5 6 20.5 3.4C20.5 1.6 21.8.6 23.1.6 24 .6 24.6 1.1 25 1.7 25.4 1.1 26 .6 26.9.6 28.2.6 29.5 1.6 29.5 3.4 29.5 6 25 9 25 9Z" fill="#d23a2b"/></svg>';
+  const balls='<svg viewBox="0 0 30 10" aria-hidden="true"><circle cx="5" cy="5" r="4.3" fill="#fff" stroke="#22303a" stroke-width=".9"/><circle cx="5" cy="5" r="1.6" fill="#22303a"/><circle cx="16" cy="5" r="4.3" fill="#e8701f" stroke="#22303a" stroke-width=".9"/><path d="M11.7 5H20.3M16 .7V9.3" stroke="#22303a" stroke-width=".7"/><rect x="22.2" y="2.4" width="6.6" height="6" rx=".8" fill="#ffd84a" stroke="#22303a" stroke-width=".9"/><path d="M24 2.4V1.6a1.5 1.5 0 0 1 3 0v.8" fill="none" stroke="#22303a" stroke-width=".9"/></svg>';
+  const chest='<svg viewBox="0 0 30 10" aria-hidden="true"><rect x="8" y="4" width="14" height="5.5" fill="#b5793e"/><rect x="7.6" y="1.6" width="14.8" height="2.8" fill="#8b5a2b"/><rect x="8" y="4.4" width="14" height=".8" fill="#ffd84a"/><rect x="14.1" y="3.6" width="1.8" height="2.6" fill="#ffd84a"/></svg>';
+  return `<div class="mboard">${box(0,heart,'主線任務','從大門走到視聽教室',`${S.mainDone?sc+' 題答對':'第 '+Math.min(S.i+1,N)+'/'+N+' 關'}`)}${box(1,balls,'支線任務','校園闖關收集徽章',`${nb}/${SIDES.length} 站`)}${box(2,chest,'寶藏任務','找出校園裡的寶箱',`${n}/${TOTAL_TREASURE} 個`)}</div>`;
+}
+function openBoard(opts){
+  const o=opts||{}, ph=phase();
+  const n2=Object.keys(S.treasures).length, sd=S.side>=SIDES.length, td=n2>=TOTAL_TREASURE;
+  const next=!S.mainDone?'主線任務':!sd&&!td?'支線任務和寶藏任務（可以同時進行）':!sd?'支線任務':!td?'寶藏任務':'';
+  sheet(`<div class="end" style="text-align:left;gap:14px"><div class="meta"><span>任務卡</span><span>${esc(S.nick||'老師')}</span></div>
+   ${o.title?`<h2>${o.title}</h2>`:''}
+   ${boardHTML(o.justDone)}
+   ${o.lead?`<p class="mlead">${o.lead}</p>`:next?`<p class="mlead">現在進行：<b>${next}</b></p>`:'<p class="mlead">三個任務全部完成！到迎曦樓一樓 104 國際教室領 VR 通行證吧。</p>'}
+   ${o.extra||''}
+   <button class="go" id="bdGo" type="button">${o.btn||'回到校園'}</button></div>`);
+  $('#bdGo').onclick=o.onGo||closeDialog;
+}
 /* treasure clue map */
 function openTreasureMap(){
   const n=Object.keys(S.treasures).length;
@@ -1655,7 +1705,8 @@ function openPass(atVR){
   const sc=S.log.filter(x=>x).length, n=Object.keys(S.treasures).length, nb=SIDES.filter(q=>S.badges[q.id]).length;
   sheet(`<div class="pass">
     <div class="ph"><canvas id="pAv" width="84" height="96"></canvas><div><div class="k">東芳國小 資安研習</div><h2>VR 體驗通行證</h2><div style="font-family:var(--display);font-size:20px">${esc(S.nick||'老師')}</div>${atVR&&S.mainDone?'<span class="stamp2">104 國際教室 ✓</span>':''}</div></div>
-    <div class="stats"><div>主線 ${S.mainDone?'✓ 完成':'進行中'}・答對 <b>${sc}</b>/${N}</div><div>徽章 <b>${nb}</b>/${SIDES.length}</div><div>寶藏 <b>${n}</b>/${TOTAL_TREASURE}</div>${S.mainDone&&n<TOTAL_TREASURE?'<button class="hbtn" type="button" id="toMap">看寶藏線索</button>':''}</div>
+    ${boardHTML()}
+    ${S.mainDone&&n<TOTAL_TREASURE?'<button class="hbtn" type="button" id="toMap" style="justify-self:start">看寶藏線索</button>':''}
     <div class="badges">${SIDES.map(q=>`<div class="bdg ${S.badges[q.id]?'on':'off'}"><span class="ic">${q.icon}</span>${q.name}</div>`).join('')}</div>
     <p style="margin:0">${!S.mainDone?'先完成主線 10 關，抵達二樓視聽教室後，就能領取通行證。':atVR?'請把這個畫面給講師看，就能體驗 VR 眼鏡！':'完成主線了！隨時可以到迎曦樓一樓的 104 國際教室出示通行證。'}</p></div>
    <button class="go" id="mgClose" type="button">回到校園</button>`);
@@ -1664,18 +1715,44 @@ function openPass(atVR){
   $('#mgClose').onclick=closeDialog;
 }
 
+/* keyboard control */
+function bumpInto(x,y){
+  const at=o=>o&&o.map===M.id&&o.x===x&&o.y===y;
+  const sk=S.seek&&CHESTS.find(c=>c.id===S.seek);
+  const poi=CHESTS.find(at)||(at(VR)&&VR)||null;
+  if(poi){G.want=poi;return arrived()}
+  const tg=goal(); if(at(tg)) return arrived();
+  if(M===CAMPUS&&x===STRANGER.x&&y===STRANGER.y) return toast('陌生人：「我是廠商，來修電腦的……」');
+  const tm=M===CAMPUS&&TEAM.find(h=>h.x===x&&h.y===y); if(tm) toast(`${tm.name}：「${tm.line}」`);
+}
+const KEYMAP={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],w:[0,-1],s:[0,1],a:[-1,0],d:[1,0],W:[0,-1],S:[0,1],A:[-1,0],D:[1,0]};
+window.addEventListener('keydown',e=>{
+  if(S.screen!=='rpg'||G.state!=='walk'||!G.cv) return;
+  if(e.target.closest&&e.target.closest('input,textarea')) return;
+  if(e.code==='Space'){e.preventDefault();G.dash=true;return}
+  const k=KEYMAP[e.key]; if(!k) return; e.preventDefault();
+  if(!G.keyDir||G.keyDir[0]!==k[0]||G.keyDir[1]!==k[1]) G.bump=null;
+  if(!G.keyDir) G.path=G.path.slice(0,1);
+  G.keyDir=k; G.want=null;
+});
+window.addEventListener('keyup',e=>{
+  if(e.code==='Space'){G.dash=false;return}
+  const k=KEYMAP[e.key]; if(k&&G.keyDir&&G.keyDir[0]===k[0]&&G.keyDir[1]===k[1]){G.keyDir=null;G.bump=null}
+});
+window.addEventListener('blur',()=>{G.keyDir=null;G.dash=false});
+
 /* ---------- RPG screens ---------- */
 function rpgView(){
-  return `<div id="rpg"><div class="rhud"><div class="rtop"><div class="clock"><span class="t" id="rt"></span><span class="p" id="rp"></span></div><div class="hbtns">${hearts()}<button class="hbtn" id="mapBtn" type="button" hidden>寶藏</button><button class="hbtn" id="passBtn" type="button">通行證</button></div></div>
+  return `<div id="rpg"><div class="rhud"><div class="rtop"><div class="clock"><span class="t" id="rt"></span><span class="p" id="rp"></span></div><div class="hbtns">${hearts()}<button class="hbtn" id="mapBtn" type="button" hidden>寶藏</button><button class="hbtn" id="taskBtn" type="button">任務卡</button><button class="hbtn" id="passBtn" type="button">通行證</button></div></div>
    <div class="quest" id="quest"><span class="tag">任務</span><span id="qt"></span></div></div>
    <div class="stage"><canvas id="cv" aria-label="校園地圖，點擊地圖讓角色移動"></canvas><div class="toast" hidden></div><div class="dlg" id="dlg" hidden></div></div></div>`;
 }
 function updateHud(){
   const q=$("#quest");
   if(S.mainDone){
-    const all=S.side>=SIDES.length;
-    $("#rt").textContent="13:30"; $("#rp").textContent=all?"支線全部完成！":`校園闖關・第 ${S.side+1}/${SIDES.length} 站`;
-    $("#qt").textContent=all?"最後一站：到迎曦樓一樓的 104 國際教室，領取 VR 體驗通行證！":SIDES[S.side].hint;
+    const all=S.side>=SIDES.length, ph=phase(), n=Object.keys(S.treasures).length;
+    $("#rt").textContent="13:30"; $("#rp").textContent=!all?`支線第 ${S.side+1}/${SIDES.length} 站・寶藏 ${n}/${TOTAL_TREASURE}`:n<TOTAL_TREASURE?`支線完成・寶藏 ${n}/${TOTAL_TREASURE}`:'三個任務全部完成！';
+    $("#qt").textContent=!all?SIDES[S.side].hint:n<TOTAL_TREASURE?'支線完成！繼續找寶箱（上方「寶藏」有線索），或到迎曦樓一樓 104 國際教室領通行證。':'最後一站：到迎曦樓一樓的 104 國際教室，領取 VR 體驗通行證！';
     const old=q.querySelector(".reveal"); old&&old.remove();
     if(!all&&!S.hint[S.side]){const b=document.createElement("button");b.className="reveal";b.type="button";b.textContent="看不懂？顯示位置";b.onclick=()=>{S.hint[S.side]=true;saveProg();updateHud()};q.appendChild(b)}
   } else {
@@ -1695,12 +1772,12 @@ function typeInto(el,text,done){
   typeTimer=setInterval(()=>{k+=1;sp.textContent=text.slice(0,k);if(k>=text.length)finish()},28);
 }
 function openEvent(){
-  G.path=[]; G.state="dialog";
+  G.path=[]; G.keyDir=null; G.state="dialog";
   const dl=$("#dlg"); dl.hidden=false;
   if(G.ending){ return showEnding() }
   const s=SCENES[S.i]; S.picked=null; S.order=shuffle([0,1,2]);
   dl.innerHTML=`<div class="meta"><span><b>${s.t}</b> ${s.p}</span><span>${s.loc}</span></div><div class="say" id="say"></div><div id="rest" hidden></div>`;
-  typeInto($("#say"),s.say,()=>{const r=$("#rest");r.hidden=false;renderEventRest()});
+  typeInto($("#say"),s.say,()=>{const r=$("#rest");if(!r)return;r.hidden=false;renderEventRest()});
   dl.scrollTop=0;
 }
 function renderEventRest(){
@@ -1718,22 +1795,19 @@ function renderEventRest(){
     closeDialog(); saveProg();
   };
 }
-function closeDialog(){stopMG();const dl=$("#dlg");dl.hidden=true;dl.innerHTML="";G.state="walk";S.picked=null;updateHud()}
+function closeDialog(){stopMG();clearInterval(typeTimer);const dl=$("#dlg");dl.hidden=true;dl.innerHTML="";G.state="walk";S.picked=null;updateHud()}
 function showGameOver(){
   const dl=$("#dlg");
   dl.innerHTML=`<div class="end bad"><h2>三顆心用完了</h2><p style="margin:0">主任把你請到教務處：「先把事件檢討報告寫完再去研習。」你寫了整整三頁……</p><p style="margin:0;color:#5f6d73">寫完了！剩下的關卡還是要完成，才能到視聽教室喔。</p><button class="go" id="goOn">寫完報告，繼續上班</button></div>`;
   dl.scrollTop=0; $("#goOn").onclick=()=>{S.i++;if(S.i>=N)G.ending=true;closeDialog()};
 }
 function showEnding(){
-  const dl=$("#dlg");
   const sc=S.log.filter(x=>x).length;
-  dl.innerHTML=`<div class="end" style="text-align:left"><div class="meta"><span><b>13:30</b> 研習開始</span><span>東芳樓二樓・視聽教室</span></div><h2>恭喜您完成考驗！</h2><p class="say" style="margin:0">準時抵達視聽室！但研習結束才能下班！</p><p style="margin:0;color:#5f6d73">歡迎來到東芳樓二樓視聽教室。沒錯，就是你現在坐的這一間。主線答對 ${sc}/${N} 關。</p>
-   <h3 style="font-size:20px">支線開啟：校園闖關</h3><p style="margin:0">研習還沒結束，校園裡藏著 6 個闖關站和 ${TOTAL_TREASURE} 個寶箱。每一站完成都會拿到徽章，還會拿到下一站的提示卡。</p>
-   <div class="card-hint"><span class="k">提示卡 1</span><span class="v">${SIDES[0].hint}</span></div>
-   <p style="margin:0;color:#5f6d73">迎曦樓一樓的 104 國際教室也開放了，隨時可以去領「VR 體驗通行證」。上方的「寶藏」按鈕有 8 個寶箱的藏身線索。</p>
-   <button class="go" id="goSide">開始校園闖關</button></div>`;
-  dl.scrollTop=0; S.mainDone=true; G.ending=false; S.mainDoneAt=S.mainDoneAt||Date.now(); saveProg(); report('完成主線，抵達視聽教室');
-  $("#goSide").onclick=()=>{closeDialog();toast("提示卡在上方任務列，看不懂可以按「顯示位置」")};
+  S.mainDone=true; G.ending=false; S.mainDoneAt=S.mainDoneAt||Date.now(); saveProg(); report('完成主線，抵達視聽教室');
+  openBoard({justDone:0,title:'恭喜您完成考驗！',
+    lead:`準時抵達視聽教室！但研習結束才能下班！主線答對 ${sc}/${N} 關。<br><b>支線任務和寶藏任務都開啟了！</b>支線有 6 個闖關站，每一站都會拿到下一站的提示卡；寶藏有 8 個寶箱，上方「寶藏」按鈕有藏身線索。`,
+    extra:`<div class="card-hint"><span class="k">提示卡 1</span><span class="v">${SIDES[0].hint}</span></div><p style="margin:0;color:#5f6d73">迎曦樓一樓的 104 國際教室也開放了，隨時可以去領「VR 體驗通行證」。</p>`,
+    btn:'開始支線和寶藏任務',onGo:()=>{closeDialog();toast("提示卡在上方任務列，看不懂可以按「顯示位置」")}});
 }
 function finish(){
   cancelAnimationFrame(G.raf); window.removeEventListener("resize",resize);
@@ -1741,15 +1815,16 @@ function finish(){
 }
 function startRPG(){
   M=CAMPUS; G.p={x:36,y:64}; makeNpcs(); ballReset(); G.goals=0; G.baskets=0; G.path=[]; G.ending=false;
-  if(S.resume){const p=S.resume;S.resume=null;if(MAPS[p.map]){M=MAPS[p.map];G.p={x:p.x,y:p.y}}G.ending=!!p.ending&&!S.mainDone} G.state="walk"; G.dir=1; G.moodT=0; G.fade=0;
-  $("#app").innerHTML=rpgView(); $("#passBtn").onclick=()=>openPass(false); $("#mapBtn").onclick=openTreasureMap;
+  S.resume0=!!S.resume; if(S.resume){const p=S.resume;S.resume=null;if(MAPS[p.map]){M=MAPS[p.map];G.p={x:p.x,y:p.y}}G.ending=!!p.ending&&!S.mainDone} G.state="walk"; G.dir=1; G.moodT=0; G.fade=0;
+  $("#app").innerHTML=rpgView(); $("#passBtn").onclick=()=>openPass(false); $("#taskBtn").onclick=()=>openBoard(); $("#mapBtn").onclick=openTreasureMap;
   G.cv=$("#cv"); G.ctx=G.cv.getContext("2d");
   resize(); camUpdate(true); updateHud();
   G.cv.addEventListener("pointerdown",onTap);
   window.addEventListener("resize",resize);
   try{document.fonts&&document.fonts.ready.then(()=>{for(const m of Object.values(MAPS))m.offKey="";if(G.cv)resize()})}catch(e){}
   cancelAnimationFrame(G.raf); G.last=0; G.raf=requestAnimationFrame(frame);
-  toast("從大門出發！點黃色的「！」，角色會自己走過去");
+  if(!S.resume0&&!S.mainDone&&S.i===0&&!S.log.length) openBoard({title:'今天有三個任務！',lead:'先完成<b>主線任務</b>，<b>支線任務</b>和<b>寶藏任務</b>就會同時開啟。每完成一個任務，就會在這張卡上蓋章。',btn:'出發！先完成主線任務',onGo:()=>{closeDialog();toast(window.matchMedia&&matchMedia('(pointer:fine)').matches?'方向鍵或 WASD 走路，按住空白鍵衝刺；也可以點黃色的「！」':'點黃色的「！」，角色會自己走過去')}});
+  else toast("點黃色的「！」，角色會自己走過去");
 }
 
 /* ---------- top-level render ---------- */
